@@ -33,14 +33,18 @@ void similar(Mat &srcImage, Mat &imageBlock) {
         }
         secondGraph.push_back(sum);
     }
-    double percentage = 0; double maximum = 255 * size.height;
+
+    //100% difference is 787 rows that are different
+    double difference = 0; //max value is 787
     for (int i = 0; i < size.height; i++) {
-        int bigger = max(firstGraph[i], secondGraph[i]);
-        int smaller = min(firstGraph[i], secondGraph[i]);
-        percentage += bigger-smaller;
+        int one = firstGraph[i], two = secondGraph[i];
+        //cout << one << " " << two << endl;
+        if (abs(two - one) > 30) {
+            difference++;
+        }
     }
-    double ans = (percentage / maximum) * 100.0;
-    cout << ans << endl;
+    cout << difference / (size.height * 1.00) *100 << endl;
+    
     return;
 }
 double imgRatio(int x, int y, double width, double height) {
@@ -60,7 +64,12 @@ int main()
 {
  // Read the image file
   image = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\edit.png");
-  Mat blockImg = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\edit.png");
+  Mat blockImg[5];
+  blockImg[0] = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Lightbulb.png");
+  blockImg[1] = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Resistor.png");
+  blockImg[2] = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Switch.png");
+  blockImg[3] = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Battery.png");
+  blockImg[4] = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\img.jpg");
 
   if (image.empty()) // Check for failure
   {
@@ -79,17 +88,14 @@ int main()
   //run method
   Range cols(565, 822);
   Range rows(70, 218);
-  Mat res = image(rows, cols);
+  Mat res = image(rows, cols); //crops image
 
-  Size size = blockImg.size();
- 
-  int w = size.width;
-  int h = size.height;
-
-  Mat dst;
-  resize(res, dst, size);
-  similar(dst, blockImg);
-  
+  for (int i =0;i<5;i++){
+      Size size = blockImg[i].size(); //gets size of image to compare
+      Mat dst; 
+      resize(res, dst, size); //resizes original image to it, for equal comparison
+      similar(dst, blockImg[i]); //runs method to see percent difference
+  }
   /*
   namedWindow("Cropped"); 
   imshow("Cropped", dst); 

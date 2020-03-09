@@ -3,9 +3,54 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <string>
-
+#include <fstream>
+#include <new>
 using namespace cv;
 using namespace std;
+
+class Scanner
+{
+public:
+    vector<Mat> prepareImgData() {
+        vector<Mat> blockImg;
+        blockImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Lightbulb.png"));
+        blockImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Resistor.png"));
+        blockImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Switch.png"));
+        blockImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Battery.png"));
+        blockImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\img.jpg"));
+        if (blockImg[0].empty()) // Check for failure
+        {
+            cout << "Could not open or find the image" << endl;
+            system("pause"); //wait for any key press
+            exit(1);
+        }
+        return blockImg;
+    }
+};
+
+
+class featureScanner {
+public:
+    vector<pair<int, int> > scanFile() {
+        string s;
+        vector<pair<int, int> >featureCoords;
+        ifstream inFile;
+        inFile.open("C:\\Users\\Roxy\\Desktop\\Circuit Project\\input\\Coordinates.txt");
+        if (!inFile) {
+            cerr << "Unable to open file datafile.txt";
+            exit(1);   // call system to stop
+        }
+        while (getline(inFile, s)) {
+            int x = 0, y = 0;
+            istringstream ss(s);
+            ss >> x >> y;
+            featureCoords.push_back(make_pair(x, y));
+        }
+        inFile.close();
+        return featureCoords;
+    }
+};
+
 Mat image;
 void similar(Mat &srcImage, Mat &imageBlock) {
     //iterate through main image, create array of the number of black pixels in a row
@@ -64,20 +109,47 @@ int main()
 {
  // Read the image file
   image = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\edit.png");
-  Mat blockImg[5];
-  blockImg[0] = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Lightbulb.png");
-  blockImg[1] = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Resistor.png");
-  blockImg[2] = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Switch.png");
-  blockImg[3] = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Battery.png");
-  blockImg[4] = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\img.jpg");
+  Scanner sc; 
+  vector<Mat> blockImg;
+  blockImg = sc.prepareImgData();
+  featureScanner fScan;
+  vector<pair<int, int> > featureCoords;
+  featureCoords = fScan.scanFile();
 
-  if (image.empty()) // Check for failure
-  {
-   cout << "Could not open or find the image" << endl;
-   system("pause"); //wait for any key press
-   return -1;
-  }
-
+  //Using the coordinates given, find the exact dimensions 
+  //that will contain the feature with as little whitespace as possible
+ /* for (int i = 0; i < featureCoords.size()-1; i++) {
+      int start = featureCoords[i].first;
+      int end = featureCoords[i+1].first;
+      int height = featureCoords[i].second;
+      bool whiteLine = false; int j = height;
+      int topH = 0, bottomH = 0;
+      while (!whiteLine) {
+          int blackCount = 0;
+          for (int k = start; k < end; k++) {
+              Vec3b pix = image.at<Vec3b>(j, k);
+              if (pix[0] < 250) {
+                 blackCount++; break;
+              }
+          } j--;
+          if (blackCount == 0) {
+              bottomH = j;
+          }
+      }
+      whiteLine = true; j = height;
+      while (!whiteLine) {
+          int blackCount = 0;
+          for (int k = start; k < end; k++) {
+              Vec3b pix = image.at<Vec3b>(j, k);
+              if (pix[0] < 250) {
+                  blackCount++; break;
+              }
+          } j++;
+          if (blackCount == 0) {
+              topH = j;
+          }
+      }
+  } */
  
 // double d = imgRatio(75, 213, 60.0, 51.0);
  // double e = imgRatio(619, 80, 151.0, 136.0);

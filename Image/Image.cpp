@@ -60,7 +60,7 @@ public:
 class Scanner
 {
 public:
-    vector<Mat> prepareImgData() {
+    vector<Mat> prepareFeatureImgData() {
         vector<Mat> blockImg;
         blockImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Lightbulb.png"));
         blockImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\Resistor.png"));
@@ -74,15 +74,34 @@ public:
         }
         return blockImg;
     }
+public:
+    vector<Mat> prepareCornerImgData() {
+        vector<Mat> cornerImg;
+        cornerImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\cornerBotLeft.png"));
+        cornerImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\cornerBotRight.png"));
+        cornerImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\cornerTopRight.png"));
+        cornerImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\cornerTopLeft.png"));
+        cornerImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\interLeft.png"));
+        cornerImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\interRight.png"));
+        cornerImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\interTop.png"));
+        cornerImg.push_back(imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\interBottom.png"));
+        if (cornerImg[0].empty()) // Check for failure
+        {
+            cout << "Could not open or find the image" << endl;
+            system("pause"); //wait for any key press
+            exit(1);
+        }
+        return cornerImg;
+    }
 };
 
 class featureScanner {
 public:
-    vector<pair<int, int> > scanFile() {
+    vector<pair<int, int> > scanFeatureFile() {
         string s;
         vector<pair<int, int> >featureCoords;
         ifstream inFile;
-        inFile.open("C:\\Users\\Roxy\\Desktop\\Circuit Project\\input\\Coordinates.txt");
+        inFile.open("C:\\Users\\Roxy\\Desktop\\Circuit Project\\input\\Feature Coordinates.txt");
         if (!inFile) {
             cerr << "Unable to open file datafile.txt";
             exit(1);   // call system to stop
@@ -95,6 +114,25 @@ public:
         }
         inFile.close();
         return featureCoords;
+    }
+public:
+    vector<pair<int, int> > scanCornerFile() {
+        string s;
+        vector<pair<int, int> >cornerCoords;
+        ifstream inFile;
+        inFile.open("C:\\Users\\Roxy\\Desktop\\Circuit Project\\input\\Feature Coordinates.txt");
+        if (!inFile) {
+            cerr << "Unable to open file datafile.txt";
+            exit(1);   // call system to stop
+        }
+        while (getline(inFile, s)) {
+            int x = 0, y = 0;
+            istringstream ss(s);
+            ss >> x >> y;
+            cornerCoords.push_back(make_pair(x, y));
+        }
+        inFile.close();
+        return cornerCoords;
     }
 };
 
@@ -142,13 +180,11 @@ class Detector {
 public:
     pair<int, int> topBot;
 public:
-    string identifyFeature(pair<int, int> beginX, pair<int, int> endX, vector<Mat> blockImg, string* names) {
+    string identifyFeature(pair<int, int> beginX, pair<int, int> endX, vector<Mat> &blockImg, string* names) {
         imageBounds imgB;
         vector<pair<double, string> >decision;
-
-       
+     
         topBot = imgB.findBounds(beginX, endX);
-
 
         //create subimage from main image
         //resize subimage to match blockImage in method
@@ -169,6 +205,30 @@ public:
             double diff = similar(dst, blockImg[i]);
             cout << "Feature match with " << names[i] << ": " << diff << endl;
             decision.push_back(make_pair(diff, names[i]));
+        }
+        sort(decision.begin(), decision.end());
+        cout << endl << "This must be a " << decision[0].second << endl;
+        cout << "-----------------------------------------" << endl;
+
+        return decision[0].second;
+    }
+public: 
+    string identifyCorner(pair<int, int> coord, vector<Mat> &cornerImg, string* corners) {
+        vector<pair<double, string> >decision;
+        int start = coord.first - 28;
+        int end = coord.second - 28;
+
+        Range cols(start, start+57);
+        Range rows(end, end+57);
+        Mat res = image(rows, cols); //crops image
+
+        for (int i = 0; i < cornerImg.size(); i++) {
+            Size size = cornerImg[i].size();
+            Mat dst;
+            resize(res, dst, size);
+            double diff = similar(dst, cornerImg[i]);
+            cout << "Feature match with " << corners[i] << ": " << diff << endl;
+            decision.push_back(make_pair(diff, corners[i]));
         }
         sort(decision.begin(), decision.end());
         cout << endl << "This must be a " << decision[0].second << endl;
@@ -200,12 +260,23 @@ int main(){
   image = imread("C:\\Users\\Roxy\\Desktop\\Circuit Project\\Circuit Images\\edit.png");
   Scanner sc; 
   vector<Mat> blockImg;
-  blockImg = sc.prepareImgData();
+  blockImg = sc.prepareFeatureImgData();
+  vector<Mat> cornerImg;
+  cornerImg = sc.prepareCornerImgData();
   string* names = new string[4];
   names[0] = "Lightbulb"; names[1] = "Resistor"; names[2] = "Switch"; names[3] = "Battery";
+  string* corners = new string[8];
+  corners[0] = "corBotLeft"; corners[1] = "corTopLeft"; 
+  corners[2] = "corTopRight"; corners[3] = "corBotRight";
+  corners[4] = "intBotLeft"; corners[5] = "intTopLeft";
+  corners[6] = "intTopRight"; corners[7] = "intBotRight";
+
   featureScanner fScan;
   vector<pair<int, int> > featureCoords;
-  featureCoords = fScan.scanFile();
+  featureCoords = fScan.scanFeatureFile();
+  vector<pair<int, int> > cornerCoords;
+  cornerCoords = fScan.scanCornerFile();
+
   vector<pair<int, int> > topBotCoords;
   vector <pair<pair<int, int>, pair<int, int> > > boundingCoords;
   //Using the coordinates given, find the exact dimensions 
@@ -228,15 +299,14 @@ int main(){
       waitKey(0);
       destroyWindow("Whitened");
   }
+
+  for (int i = 0; i < cornerCoords.size(); i++) {
+      detect.identifyCorner(cornerCoords[i], cornerImg, corners);
+
+  }
+
+
   
-
-    
-
-
-  
-
-
-
    /*
    namedWindow("Cropped");
    imshow("Cropped", dst);
